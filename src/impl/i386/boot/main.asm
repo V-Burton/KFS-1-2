@@ -1,7 +1,19 @@
 global header_start
+section .bss
+align 16
+stack_bottom:
+    resb 16384 ; 16KB stack
+stack_top:
+
 section .text
-bits 32
+global start
+extern kernel_main; Cette fonction est externe
+
 start:
-    ; print  `OK`
-    mov dword [0xb8000], 'O' | 0x2f4b2f4f
-    hlt
+    ; Set up the stack
+    mov esp, stack_top
+
+    ; Call the kernel's main function
+    call kernel_main
+
+    ; If kernel_main returns, halt the CPU
