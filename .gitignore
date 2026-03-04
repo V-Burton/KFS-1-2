@@ -1,0 +1,4 @@
+targets/i386/iso/boot/kernel.bin
+build/*
+dist/*
+*.o
