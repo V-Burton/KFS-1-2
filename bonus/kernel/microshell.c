@@ -26,36 +26,68 @@ unsigned char kbd_map_upper[128] = {
 void print_cpu_info() {
     uint32_t eax, ebx, ecx, edx;
     char vendor[13];
-
-    __asm__ volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(0));
+    
+    __asm__ volatile("cpuid" : "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(0));
     ((uint32_t*)vendor)[0] = ebx;
     ((uint32_t*)vendor)[1] = edx;
     ((uint32_t*)vendor)[2] = ecx;
     vendor[12] = '\0';
+    ft_printf(0x0F, "CPU Vendor : %s\n", vendor);
+
+    char brand[49];
+    // Première partie
+    __asm__ volatile("cpuid" : "=a"(((uint32_t*)brand)[0]), "=b"(((uint32_t*)brand)[1]), "=c"(((uint32_t*)brand)[2]), "=d"(((uint32_t*)brand)[3]) : "a"(0x80000002));
+    // Deuxième partie
+    __asm__ volatile("cpuid" : "=a"(((uint32_t*)brand)[4]), "=b"(((uint32_t*)brand)[5]), "=c"(((uint32_t*)brand)[6]), "=d"(((uint32_t*)brand)[7]) : "a"(0x80000003));
+    // Troisième partie
+    __asm__ volatile("cpuid" : "=a"(((uint32_t*)brand)[8]), "=b"(((uint32_t*)brand)[9]), "=c"(((uint32_t*)brand)[10]), "=d"(((uint32_t*)brand)[11]) : "a"(0x80000004));
+    brand[48] = '\0';
     
-    ft_printf(0x0B, "CPU Vendor: ");
-    ft_printf(0x0F, "%s\n", vendor);
+    ft_printf(0x0F, "CPU Model  : %s\n", brand);
+
+    // Récupération des Cores / Threads logiques
+    __asm__ volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(1));
+    int logical_cores = (ebx >> 16) & 0xFF;
+    
+    // Certains vieux CPU (ou QEMU par défaut) renvoient 0. Dans ce cas, il y a au moins 1 coeur.
+    if (logical_cores == 0) logical_cores = 1;
+
+    ft_printf(0x0F, "CPU Threads: %d\n", logical_cores);
 }
 
-void dump_stack(int line) {
-    uint32_t *esp;
+void dump_stack(int lines) {
+    uint32_t esp;
     __asm__ volatile("mov %%esp, %0" : "=r"(esp));
-    uint32_t *ptr = (uint32_t*)esp;
     
-    ft_printf(0x0C, "--- Stack dump (ESP: %X) ---\n", esp);
-    for (int i = 0; i < line; i++) {
+    uint32_t *ptr = (uint32_t *)esp;
+
+    ft_printf(0x0F, "------------------------------------------------\n");
+    ft_printf(0x0B, " Kernal Stack Dump (ESP: 0x%X)\n", esp);
+    ft_printf(0x0F, "------------------------------------------------\n");
+    ft_printf(0x07, " ADDRESS    | HEX VALUE  | ASCII\n");
+    ft_printf(0x0F, "------------------------------------------------\n");
+    
+    for (int i = 0; i < lines; i++) {
+        uint32_t addr = (uint32_t)(ptr + i);
         uint32_t val = *(ptr + i);
-        ft_printf(0x0F, "[ESP+%02d] 0x%X : 0x%08X | ", i * 4, ptr + i, val);
+        
+        // Affichage structuré
+        ft_printf(0x0E, " 0x%X ", addr);
+        ft_printf(0x0F, "| 0x%X ", val);
+        ft_printf(0x0F, "| ");
+
+        // Affichage ASCII humainement lisible
         for (int j = 0; j < 4; j++) {
             char c = (val >> (j * 8)) & 0xFF;
             if (c >= 32 && c <= 126) {
-                ft_printf(0x0F, "%c", c);
+                ft_printf(0x0A, "%c", c); // Vert pour les caractères lisibles
             } else {
-                ft_printf(0x08, ".");
+                ft_printf(0x08, ".");     // Gris pour le reste
             }
         }
         ft_printf(0x0F, "\n");
     }
+    ft_printf(0x0F, "------------------------------------------------\n");
 }
 
 static int str_eq(const char *a, const char *b) { 
@@ -82,11 +114,12 @@ void evaluate_command(const char *cmd) {
         flush_screen();
     } else if (str_eq(cmd, "help")) {
         ft_printf(0x0A, "Commandes disponibles :\n");
-        ft_printf(0x0A, "  proc  - Affiche les informations CPU\n");
-        ft_printf(0x0A, "  clear - Efface l'ecran\n");
-        ft_printf(0x0A, "  addr_gdt - Affiche l'adresse de la GDT\n");
-        ft_printf(0x0A, "  help  - Affiche cette aide\n");
-        ft_printf(0x0A, "  stack_dump <n> - Affiche les n premieres ligne de la stack. (max 24)\n");
+        ft_printf(0x07, "  help  - Affiche cette aide\n");
+        ft_printf(0x07, "  proc  - Affiche les informations CPU\n");
+        ft_printf(0x07, "  addr_gdt - Affiche l'adresse de la GDT\n");
+        ft_printf(0x07, "  panic - Simule une panique du kernel (int 0x05)\n");
+        ft_printf(0x07, "  stack_dump <n> - Affiche les n premieres ligne de la stack. (max 24)\n");
+        ft_printf(0x07, "  clear - Efface l'ecran\n");
     } else if (str_eq(cmd, "addr_gdt")) {
         gdt_ptr_t gdt_read;
         __asm__ __volatile__("sgdt %0" : "=m" (gdt_read));
@@ -94,12 +127,14 @@ void evaluate_command(const char *cmd) {
         ft_printf(0x0A, "GDT Base Address: ");
         ft_printf(0x0B, "0x%x\n", gdt_read.base);
     } else if (str_eq_n(cmd, "stack_dump", 9)) {
-        int n = 0;
-        if (ft_atoi(cmd) == 1 && n > 0 && n <= 24) {
+        int n = ft_atoi(cmd + 11);
+        if (n > 0 && n <= 24) {
             dump_stack(n);
         } else {
             ft_printf(0x0C, "Usage: stack dump <n> (n doit etre entre 1 et 24)\n");
         }
+    } else if (str_eq(cmd, "panic")) {
+        __asm__ volatile("int $0x05");
     } else {
         ft_printf(0x0C, "Commande inconnue: %s\n", cmd);
     }
