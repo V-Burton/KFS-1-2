@@ -36,7 +36,7 @@ BONUS_OBJS := $(patsubst $(BONUS_DIR)/%.asm, $(BUILD_BONUS_DIR)/%.o, $(BONUS_ASM
 all: build-mandatory build-bonus
 
 # --- Build Mandatory ---
-build-mandatory: $(MANDATORY_OBJS)
+mandatory: $(MANDATORY_OBJS)
 	@mkdir -p $(DIST_DIR)
 	$(LD) $(LDFLAGS) -o $(DIST_DIR)/kernel.bin $(MANDATORY_OBJS)
 	@mkdir -p targets/i386/iso/boot
@@ -52,7 +52,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 # --- Build Bonus ---
-build-bonus: $(BONUS_OBJS)
+bonus: $(BONUS_OBJS)
 	@mkdir -p $(DIST_BONUS_DIR)
 	$(LD) $(LDFLAGS) -o $(DIST_BONUS_DIR)/kernel.bin $(BONUS_OBJS)
 	@mkdir -p targets/i386/iso-bonus/boot/grub

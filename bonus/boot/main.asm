@@ -7,15 +7,14 @@ stack_top:
 
 section .text
 global start
-extern kernel_main; Cette fonction est externe
+extern kernel_main;
 
 start:
     cli ; 
     ; Set up the stack
     mov esp, stack_top ;
-    ; Call the kernel's main function
     call kernel_main
 
 .hang:
     hlt
-    jmp .hang    ; ← si hlt est interrompu, on boucle
+    jmp .hang    ; si hlt est interrompu, on boucle

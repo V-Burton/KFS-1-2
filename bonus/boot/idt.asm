@@ -69,6 +69,7 @@ isr7:
 
 global isr8 ; Double Fault (8)
 isr8:
+    push dword 0
     push dword 8
     jmp common_stub
 
@@ -80,25 +81,30 @@ isr9:
 
 global isr10 ; Invalid TSS (10)
 isr10:
+    push dword 0
     push dword 10
     jmp common_stub
 
 global isr11 ; Segment Not Present (11)
 isr11:
+    push dword 0
     push dword 11
     jmp common_stub
 
 global isr12 ; Stack-Segment Fault (12)
 isr12:
+    push dword 0
     push dword 12
     jmp common_stub
 
 global isr13 ; General Protection Fault (13)
 isr13:
+    push dword 0
     push dword 13
     jmp common_stub
 global isr14
 isr14:          ; Page fault - CPU pousse un error code
+    push dword 0 ; Code d'erreur fictif (le vrai code d'erreur est déjà sur la pile)
     push dword 14
     jmp common_stub
 global isr15 ; Reserved (15)

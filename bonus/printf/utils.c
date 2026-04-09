@@ -6,12 +6,6 @@ int	ft_putchar(char c, color_t color)
 	return (1);
 }
 
-void terminal_write_string(const char* data, color_t color) {
-    for (int i = 0; data[i] != '\0'; i++) {
-        terminal_putchar(data[i], color);
-    }  
-}
-
 int	ft_putnbr(int n, int len, color_t color)
 {
 	if (n == INT_MIN)
@@ -56,7 +50,7 @@ int	ft_write_exa(unsigned long long nbr, char *base, int len, color_t color)
 
 int	ft_putnbr_base_exa(unsigned long long nbr, int len, color_t color)
 {
-	terminal_write_string("0x", color);
+	ft_printf(color, "0x");
 	len += 2;
 	len = ft_write_exa(nbr, EXA_DOWN, len, color);
 	return (len);
@@ -99,7 +93,7 @@ int	ft_putstr(char *s, color_t color)
 	i = 0;
 	if (s == NULL)
 	{
-		terminal_write_string("null", color);
+		ft_printf(color, "null");
 		return (i += 6);
 	}
 	while (s[i])

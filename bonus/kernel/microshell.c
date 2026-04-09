@@ -6,26 +6,27 @@ static char input_buffer[256];
 static int input_len = 0;
 keyboard_state_t kbd_state = {0};
 
-// Table de correspondance pour le clavier AZERTY (Scancode Set 1)
+// Table de correspondance pour le clavier QWERTY
 unsigned char kbd_map_lower[128] = {
     0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', ')', '=', '\b',
-    '\t', 'a', 'z', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '^', '$', '\n',
-    0, 'q', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', '0', '`',
-    0, '*', 'w', 'x', 'c', 'v', 'b', 'n', ',', ';', ':', '!', 0,
+    '\t', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '^', '$', '\n',
+    0, 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '0', '`',
+    0, '*', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', ':', '!', 0,
     '*', 0, ' ', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 unsigned char kbd_map_upper[128] = {
     0, 27, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\b',
-    '\t', 'A', 'Z', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',
-    0, 'Q', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', '0', '`',
-    0, '|', 'W', 'X', 'C', 'V', 'B', 'N', ',', ';', ':', '"', 0,
+    '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',
+    0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '0', '`',
+    0, '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ';', ':', '"', 0,
     '|', 0, ' ', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 void print_cpu_info() {
     uint32_t eax, ebx, ecx, edx;
-    char vendor[13];
+    static char vendor[13];
+    static char brand[49];
     
     __asm__ volatile("cpuid" : "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(0));
     ((uint32_t*)vendor)[0] = ebx;
@@ -34,7 +35,6 @@ void print_cpu_info() {
     vendor[12] = '\0';
     ft_printf(0x0F, "CPU Vendor : %s\n", vendor);
 
-    char brand[49];
     // Première partie
     __asm__ volatile("cpuid" : "=a"(((uint32_t*)brand)[0]), "=b"(((uint32_t*)brand)[1]), "=c"(((uint32_t*)brand)[2]), "=d"(((uint32_t*)brand)[3]) : "a"(0x80000002));
     // Deuxième partie
@@ -76,13 +76,13 @@ void dump_stack(int lines) {
         ft_printf(0x0F, "| 0x%X ", val);
         ft_printf(0x0F, "| ");
 
-        // Affichage ASCII humainement lisible
+        // Affichage ASCII
         for (int j = 0; j < 4; j++) {
             char c = (val >> (j * 8)) & 0xFF;
             if (c >= 32 && c <= 126) {
-                ft_printf(0x0A, "%c", c); // Vert pour les caractères lisibles
+                ft_printf(0x0A, "%c", c);
             } else {
-                ft_printf(0x08, ".");     // Gris pour le reste
+                ft_printf(0x08, ".");
             }
         }
         ft_printf(0x0F, "\n");
@@ -117,6 +117,7 @@ void evaluate_command(const char *cmd) {
         ft_printf(0x07, "  help  - Affiche cette aide\n");
         ft_printf(0x07, "  proc  - Affiche les informations CPU\n");
         ft_printf(0x07, "  addr_gdt - Affiche l'adresse de la GDT\n");
+        ft_printf(0x07, "  divide_by_zero - Simule une division par zero\n");
         ft_printf(0x07, "  panic - Simule une panique du kernel (int 0x05)\n");
         ft_printf(0x07, "  stack_dump <n> - Affiche les n premieres ligne de la stack. (max 24)\n");
         ft_printf(0x07, "  clear - Efface l'ecran\n");
@@ -134,8 +135,14 @@ void evaluate_command(const char *cmd) {
             ft_printf(0x0C, "Usage: stack dump <n> (n doit etre entre 1 et 24)\n");
         }
     } else if (str_eq(cmd, "panic")) {
-        __asm__ volatile("int $0x05");
-    } else {
+        __asm__ volatile("int $0x08");
+    } else if (str_eq(cmd, "divide_by_zero")){
+        volatile int a = 24;
+        volatile int b = 0;
+        volatile int c = a / b;
+        (void)c;
+    }
+    else {
         ft_printf(0x0C, "Commande inconnue: %s\n", cmd);
     }
 

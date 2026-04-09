@@ -51,7 +51,7 @@ void set_idt_gate(int n, uint32_t handler) {
     idt[n].base_hi = (handler >> 16) & 0xFFFF;
     idt[n].sel = 0x08;
     idt[n].always0 = 0;
-    idt[n].flags = 0x8E; //Present, ring 0 (kernel)
+    idt[n].flags = 0x8E;
 }
 
 void setup_idt() {
@@ -99,7 +99,7 @@ void setup_idt() {
 void interrupt_handler(struct registers *r) {
     if (r->int_no < 32) {
         ft_printf(0x0C, "Exception: %d\n", r->int_no);
-        return;
+        __asm__ volatile("cli\; hlt");
     } else if (r->int_no == 33) { // IRQ1 - clavier
         uint8_t scancode = inb(0x60); // Lecture de l´octet sur le port du clavier}
         handle_keyboard(scancode);

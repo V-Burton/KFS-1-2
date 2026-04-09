@@ -9,7 +9,6 @@ struct keyboard_state {
 
 typedef struct keyboard_state keyboard_state_t;
 
-
 void evaluate_command(const char *cmd);
 void handle_keyboard(uint8_t scancode);
 

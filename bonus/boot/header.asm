@@ -8,7 +8,7 @@ header_start:
     dd 0
     ; header length (bytes from header_start to header_end)
     dd header_end - header_start
-    ; checksum: (magic + arch + header_length + checksum) == 0 (mod 2^32)
+    ; checksum: (magic + arch + header_length) == 0 (mod 2^32)
     dd -(0xe85250d6 + 0 + (header_end - header_start))
 
     ; end tag: type 0, size 8
